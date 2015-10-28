@@ -3,6 +3,7 @@ require 'logger'
 require 'sequel'
 require 'pact_broker'
 require 'delegate'
+require 'rack/ssl-enforcer'
 
 class DatabaseLogger < SimpleDelegator
   def info *args
@@ -25,6 +26,19 @@ DATABASE_CREDENTIALS = {
   host: ENV['PACT_BROKER_DATABASE_HOST'],
   database: ENV['PACT_BROKER_DATABASE_NAME']
 }
+
+require './lib/validations'
+require './lib/conf'
+require './lib/rack-oauth2-bearer_checker'
+require './lib/rack-oauth2-bearer_helpers'
+require './lib/rack-attack_setup'
+
+unless ENV['SKIP_HTTPS_ENFORCER'] == 'true'
+  use Rack::SslEnforcer, :except => [Conf::HEART_BEAT_REGEX]
+end
+
+use Rack::Attack
+use Rack::OAuth2::Bearer::Checker
 
 app = PactBroker::App.new do | config |
   # change these from their default values if desired
